@@ -1,88 +1,96 @@
-import { useEffect, useState } from 'react';
+import React, { Component } from 'react';
 import { Section } from './Section';
 import { PhonebookInput } from './PhonebookInput';
 import { nanoid } from 'nanoid';
 import { ContactList } from './ContactList';
 
-export const App = () => {
-  const [state, setState] = useState(() => {
-    const savedContacts = localStorage.getItem('contacts');
-    return {
-      contacts: savedContacts ? JSON.parse(savedContacts) : [],
-      name: '',
-      number: '',
-      filter: '',
-    };
-  });
-  useEffect(() => {
-    localStorage.setItem('contacts', JSON.stringify(state.contacts));
-  }, [state.contacts]);
-
-  const handleChange = evt => {
-    const { name, value } = evt.target;
-    setState(prevState => ({
-      ...prevState,
-      [name]: value,
-    }));
+export class App extends Component {
+  state = {
+    contacts: [],
+    name: '',
+    number: '',
+    filter: '',
   };
 
-  const handleSubmit = evt => {
+  componentDidMount() {
+    const savedContacts = localStorage.getItem('contacts');
+    if (savedContacts) {
+      this.setState({ contacts: JSON.parse(savedContacts) });
+    }
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState.contacts !== this.state.contacts) {
+      localStorage.setItem('contacts', JSON.stringify(this.state.contacts));
+    }
+  }
+
+  handleChange = evt => {
+    const { name, value } = evt.target;
+    this.setState({ [name]: value });
+  };
+
+  handleSubmit = evt => {
     evt.preventDefault();
-    const nameExists = state.contacts.some(
-      contact => contact.name.toLowerCase() === state.name.toLowerCase()
+    const { name, number, contacts } = this.state;
+
+    const nameExists = contacts.some(
+      contact => contact.name.toLowerCase() === name.toLowerCase()
     );
 
     if (nameExists) {
-      alert(`${state.name} is already in the phonebook.`);
+      alert(`${name} is already in the phonebook.`);
       return;
     }
 
     const newContact = {
       id: nanoid(),
-      name: state.name,
-      number: state.number,
+      name,
+      number,
     };
-    setState(prevState => ({
-      ...prevState,
+
+    this.setState(prevState => ({
       contacts: [...prevState.contacts, newContact],
       name: '',
       number: '',
     }));
   };
-  const handleDelete = id => {
-    setState(prevState => ({
-      ...prevState,
+
+  handleDelete = id => {
+    this.setState(prevState => ({
       contacts: prevState.contacts.filter(contact => contact.id !== id),
     }));
   };
-  const handleFilterChange = evt => {
-    setState(prevState => ({
-      ...prevState,
-      filter: evt.target.value,
-    }));
+
+  handleFilterChange = evt => {
+    this.setState({ filter: evt.target.value });
   };
 
-  const visibleContacts = state.contacts.filter(contact =>
-    contact.name.toLowerCase().includes((state.filter || '').toLowerCase())
-  );
-  return (
-    <div>
-      <Section title="Phonebook">
-        <PhonebookInput
-          name={state.name}
-          number={state.number}
-          onChange={handleChange}
-          onSubmit={handleSubmit}
-        />
-      </Section>
-      <Section title="Contacts">
-        <ContactList
-          filter={state.filter}
-          onFilterChange={handleFilterChange}
-          contacts={visibleContacts}
-          onDelete={handleDelete}
-        />
-      </Section>
-    </div>
-  );
-};
+  render() {
+    const { contacts, name, number, filter } = this.state;
+    const visibleContacts = contacts.filter(contact =>
+      contact.name.toLowerCase().includes((filter || '').toLowerCase())
+    );
+
+    return (
+      <div>
+        <Section title="Phonebook">
+          <PhonebookInput
+            name={name}
+            number={number}
+            onChange={this.handleChange}
+            onSubmit={this.handleSubmit}
+          />
+        </Section>
+        <Section title="Contacts">
+          <ContactList
+            filter={filter}
+            onFilterChange={this.handleFilterChange}
+            contacts={visibleContacts}
+            onDelete={this.handleDelete}
+          />
+        </Section>
+      </div>
+    );
+  }
+}
